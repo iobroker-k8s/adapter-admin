@@ -1,0 +1,97 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "install-{{ .Release.Name }}"
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-delete-policy": before-hook-creation
+spec:
+  template:
+    metadata:
+      name: "install-{{ .Release.Name }}"
+      labels:
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: add-adapter
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+          - "add"
+        env:
+          - name: IOB_K8S_INSTANCE
+            value: {{ .Values.adapter.instance | quote }}
+          - name: IOB_K8S_HOSTNAME
+            value: {{ .Values.adapter.hostname | quote }}
+        {{- if .Values.adapter.configMapName }}
+        volumeMounts:
+          - name: iobroker-config
+            mountPath: /app/iobroker-data/iobroker.json
+            subPath: iobroker.json
+        {{- end }}
+      {{- if .Values.adapter.configMapName }}
+      volumes:
+        - name: iobroker-config
+          configMap:
+            name: {{ .Values.adapter.configMapName | quote }}
+            items:
+              - key: iobroker.json
+                path: iobroker.json
+      {{- end }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "delete-{{ .Release.Name }}"
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": post-delete
+    "helm.sh/hook-delete-policy": hook-succeeded
+spec:
+  template:
+    metadata:
+      name: "delete-{{ .Release.Name }}"
+      labels:
+        app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+        app.kubernetes.io/instance: {{ .Release.Name | quote }}
+        helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: delete-adapter
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        args:
+          - "delete"
+        env:
+          - name: IOB_K8S_INSTANCE
+            value: {{ .Values.adapter.instance | quote }}
+          - name: IOB_K8S_HOSTNAME
+            value: {{ .Values.adapter.hostname | quote }}
+        {{- if .Values.adapter.configMapName }}
+        volumeMounts:
+          - name: iobroker-config
+            mountPath: /app/iobroker-data/iobroker.json
+            subPath: iobroker.json
+        {{- end }}
+      {{- if .Values.adapter.configMapName }}
+      volumes:
+        - name: iobroker-config
+          configMap:
+            name: {{ .Values.adapter.configMapName | quote }}
+            items:
+              - key: iobroker.json
+                path: iobroker.json
+      {{- end }}

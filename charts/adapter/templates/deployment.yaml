@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "helm.fullname" . }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  {{- $cfg := .Values.adapter.config | default (dict) }}
+  {{- $common := $cfg.common | default (dict) }}
+  replicas: {{ if $common.enabled }}1{{ else }}0{{ end }}
+  selector:
+    matchLabels:
+      {{- include "helm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- /* Build annotations map with checksum and merge user podAnnotations (if any) */}}
+      {{- $ann := dict "checksum/adapter-config" (print $cfg | sha256sum) }}
+      {{- with .Values.podAnnotations }}
+      {{- range $k, $v := . }}
+      {{- $_ := set $ann $k $v }}
+      {{- end }}
+      {{- end }}
+      annotations:
+        {{- toYaml $ann | nindent 8 }}
+      labels:
+        {{- include "helm.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "helm.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - "start"
+            - "--console"
+            - "--loglevel"
+            - {{ $common.loglevel | default "info" | quote }}
+          env:
+            - name: IOB_K8S_INSTANCE
+              value: {{ .Values.adapter.instance | quote }}
+            - name: IOB_K8S_HOSTNAME
+              value: {{ .Values.adapter.hostname | quote }}
+          livenessProbe:
+            {{- toYaml .Values.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- /* Merge user volumeMounts with optional adapter config mount */}}
+          {{- $volumemounts := .Values.volumeMounts | default (list) }}
+          {{- if .Values.adapter.configMapName }}
+          {{- $cfg := dict "name" "iobroker-config" "mountPath" "/app/iobroker-data/iobroker.json" "subPath" "iobroker.json" }}
+          {{- $volumemounts = append $volumemounts $cfg }}
+          {{- end }}
+          {{- if $volumemounts }}
+          volumeMounts:
+            {{- toYaml $volumemounts | nindent 12 }}
+          {{- end }}
+      {{- /* Merge user volumes with optional adapter config volume */}}
+      {{- $volumes := .Values.volumes | default (list) }}
+      {{- if .Values.adapter.configMapName }}
+      {{- $cfgVol := dict "name" "iobroker-config" "configMap" (dict "name" .Values.adapter.configMapName "items" (list (dict "key" "iobroker.json" "path" "iobroker.json"))) }}
+      {{- $volumes = append $volumes $cfgVol }}
+      {{- end }}
+      {{- if $volumes }}
+      volumes:
+        {{- toYaml $volumes | nindent 8 }}
+      {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
