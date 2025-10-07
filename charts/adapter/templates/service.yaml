@@ -1,0 +1,17 @@
+{{- if and .Values.adapter .Values.adapter.config .Values.adapter.config.native .Values.adapter.config.native.port }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "helm.fullname" . }}
+  labels:
+    {{- include "helm.labels" . | nindent 4 }}
+spec:
+  type: LoadBalancer
+  ports:
+    - port: {{ .Values.adapter.config.native.port }}
+      targetPort: {{ .Values.adapter.config.native.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "helm.selectorLabels" . | nindent 4 }}
+{{- end }}
