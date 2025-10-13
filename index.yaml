@@ -3,6 +3,16 @@ entries:
   adapter-admin:
   - apiVersion: v2
     appVersion: 7.7.3
+    created: "2025-10-13T20:52:26.246823362Z"
+    description: Adapter admin for iobroker-k8s
+    digest: 1e26a9f37a9a0b29e5ddcae012fa498f67f6db189c1d1f7ff778a127112fbfe0
+    name: adapter-admin
+    type: application
+    urls:
+    - https://github.com/iobroker-k8s/adapter-admin/releases/download/adapter-admin-0.1.10/adapter-admin-0.1.10.tgz
+    version: 0.1.10
+  - apiVersion: v2
+    appVersion: 7.7.3
     created: "2025-10-07T18:39:20.992198755Z"
     description: Adapter admin for iobroker-k8s
     digest: c36279ebe85cc59990ba8994a04064a6b2f6ac14a98bc88f4603b28bf3c0ce87
@@ -21,4 +31,4 @@ entries:
     urls:
     - https://github.com/iobroker-k8s/adapter-admin/releases/download/adapter-admin-0.1.8/adapter-admin-0.1.8.tgz
     version: 0.1.8
-generated: "2025-10-07T18:39:20.992212841Z"
+generated: "2025-10-13T20:52:26.246835254Z"
